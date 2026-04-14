@@ -1,0 +1,221 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Nunito', sans-serif; }
+  #app {
+    min-height: 100vh;
+    background: #e8f4f8;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px;
+    user-select: none;
+  }
+  #header { text-align: center; margin-bottom: 20px; }
+  #header h1 { font-size: 32px; font-weight: 900; color: #1a5f7a; letter-spacing: -1px; }
+  #header p { font-size: 14px; color: #1a5f7a; margin-top: 4px; }
+  #stats { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; justify-content: center; }
+  .stat { background: white; border-radius: 16px; padding: 10px 20px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  .stat-num { font-size: 24px; font-weight: 900; color: #1a5f7a; line-height: 1; }
+  .stat-label { font-size: 11px; color: #1a5f7a; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  #grid {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 6px;
+    max-width: 480px;
+    width: 100%;
+    background: #c8e6ef;
+    border-radius: 20px;
+    padding: 14px;
+    box-shadow: 0 4px 20px rgba(26,95,122,0.15);
+  }
+  .bubble {
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #e0f7ff, #7dcfee);
+    border: 1.5px solid rgba(100,190,220,0.6);
+    cursor: pointer;
+    transition: transform 0.08s;
+    position: relative;
+    overflow: hidden;
+  }
+  .bubble::after {
+    content: '';
+    position: absolute;
+    top: 18%; left: 20%;
+    width: 30%; height: 18%;
+    background: rgba(255,255,255,0.65);
+    border-radius: 50%;
+    transform: rotate(-30deg);
+  }
+  .bubble:hover:not(.popped) { transform: scale(1.1); }
+  .bubble:active:not(.popped) { transform: scale(0.9); }
+  .bubble.popped {
+    background: #b8d8e4;
+    border: 1.5px dashed #8db8c8;
+    cursor: default;
+    transform: scale(0.92);
+  }
+  .bubble.popped::after { display: none; }
+  .bubble.pop-anim { animation: popIt 0.15s ease-out; }
+  @keyframes popIt {
+    0% { transform: scale(1.2); }
+    60% { transform: scale(0.8); }
+    100% { transform: scale(0.92); }
+  }
+  #controls { margin-top: 20px; display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  .btn {
+    background: #1a5f7a;
+    color: white;
+    border: none;
+    border-radius: 50px;
+    padding: 10px 24px;
+    font-family: 'Nunito', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .btn:hover { background: #5a9db8; transform: scale(1.03); }
+  .btn:active { transform: scale(0.97); }
+  #progress-bar-wrap {
+    width: 100%; max-width: 480px;
+    background: #c8e6ef; border-radius: 50px;
+    height: 10px; margin-bottom: 12px; overflow: hidden;
+  }
+  #progress-bar { height: 100%; background: #1a5f7a; border-radius: 50px; transition: width 0.3s; width: 0%; }
+  #celebration {
+    display: none; text-align: center; margin-top: 16px;
+    font-size: 22px; font-weight: 900; color: #1a5f7a;
+    animation: fadeIn 0.4s;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  #mode-bar {
+    display: flex; gap: 8px; margin-bottom: 16px;
+    background: white; border-radius: 50px; padding: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  .mode-btn {
+    border: none; border-radius: 50px; padding: 7px 16px;
+    font-family: 'Nunito', sans-serif; font-size: 13px; font-weight: 700;
+    cursor: pointer; background: transparent; color: #1a5f7a; transition: all 0.15s;
+  }
+  .mode-btn.active { background: #1a5f7a; color: white; }
+</style>
+
+<div id="app">
+  <div id="header">
+    <h1>Bubble Wrap</h1>
+    <p>The most satisfying thing on the internet</p>
+  </div>
+  <div id="stats">
+    <div class="stat"><div class="stat-num" id="count">0</div><div class="stat-label">Popped</div></div>
+    <div class="stat"><div class="stat-num" id="remaining">100</div><div class="stat-label">Remaining</div></div>
+    <div class="stat"><div class="stat-num" id="streak">0</div><div class="stat-label">Streak</div></div>
+  </div>
+  <div id="progress-bar-wrap"><div id="progress-bar"></div></div>
+  <div id="mode-bar">
+    <button class="mode-btn active" onclick="setMode('tap',event)">Tap</button>
+    <button class="mode-btn" onclick="setMode('drag',event)">Drag</button>
+    <button class="mode-btn" onclick="setMode('frenzy',event)">Frenzy</button>
+  </div>
+  <div id="grid"></div>
+  <div id="celebration"></div>
+  <div id="controls">
+    <button class="btn" onclick="resetGrid()">New Sheet</button>
+    <button class="btn" onclick="popAll()">Pop All</button>
+  </div>
+</div>
+
+<script>
+const TOTAL = 100;
+let popped = 0, streak = 0, lastTime = 0, mode = 'tap', isDragging = false;
+let audioCtx, frenzyTimer;
+
+const grid = document.getElementById('grid');
+const countEl = document.getElementById('count');
+const remEl = document.getElementById('remaining');
+const streakEl = document.getElementById('streak');
+const bar = document.getElementById('progress-bar');
+const cel = document.getElementById('celebration');
+
+function getAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playPop() {
+  try {
+    const ctx = getAudio();
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    const freq = [100,110,120,130,150][Math.floor(Math.random()*5)];
+    o.frequency.setValueAtTime(freq, ctx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(freq*0.3, ctx.currentTime+0.08);
+    g.gain.setValueAtTime(0.18, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+0.1);
+    o.type = 'sine'; o.start(); o.stop(ctx.currentTime+0.12);
+  } catch(e) {}
+}
+
+function popBubble(el) {
+  if (el.classList.contains('popped')) return;
+  el.classList.add('popped','pop-anim');
+  playPop();
+  popped++;
+  const now = Date.now();
+  streak = (now - lastTime < 800) ? streak + 1 : 1;
+  lastTime = now;
+  countEl.textContent = popped;
+  remEl.textContent = TOTAL - popped;
+  streakEl.textContent = streak;
+  bar.style.width = (popped/TOTAL*100)+'%';
+  el.addEventListener('animationend', () => el.classList.remove('pop-anim'), {once:true});
+  if (popped === TOTAL) { cel.style.display='block'; cel.textContent='🎉 All popped! You did it!'; }
+}
+
+function onBubbleClick(e) { if (mode==='tap') popBubble(e.currentTarget); }
+function onBubbleEnter(e) { if (mode==='drag' && isDragging) popBubble(e.currentTarget); }
+function onBubbleTouch(e) { e.preventDefault(); popBubble(e.currentTarget); }
+
+function setMode(m, e) {
+  mode = m;
+  clearInterval(frenzyTimer);
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  e.target.classList.add('active');
+  if (m==='frenzy') {
+    frenzyTimer = setInterval(() => {
+      const u = [...document.querySelectorAll('.bubble:not(.popped)')];
+      if (!u.length) { clearInterval(frenzyTimer); return; }
+      popBubble(u[Math.floor(Math.random()*u.length)]);
+    }, 80);
+  }
+}
+
+function resetGrid() {
+  clearInterval(frenzyTimer);
+  popped=0; streak=0; lastTime=0;
+  countEl.textContent=0; remEl.textContent=TOTAL; streakEl.textContent=0;
+  bar.style.width='0%'; cel.style.display='none'; cel.textContent='';
+  grid.innerHTML='';
+  for (let i=0; i<TOTAL; i++) {
+    const b = document.createElement('div');
+    b.className='bubble';
+    b.addEventListener('click', onBubbleClick);
+    b.addEventListener('mouseenter', onBubbleEnter);
+    b.addEventListener('touchstart', onBubbleTouch, {passive:false});
+    grid.appendChild(b);
+  }
+}
+
+function popAll() {
+  clearInterval(frenzyTimer);
+  [...document.querySelectorAll('.bubble:not(.popped)')].forEach((el,i) => setTimeout(()=>popBubble(el), i*18));
+}
+
+grid.addEventListener('mousedown', ()=>{ isDragging=true; });
+document.addEventListener('mouseup', ()=>{ isDragging=false; });
+
+resetGrid();
+</script>
